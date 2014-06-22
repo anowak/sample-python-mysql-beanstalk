@@ -1,0 +1,5 @@
+.elasticbeanstalk/
+.bundle/
+coverage/
+.*.swp
+*.pyc
