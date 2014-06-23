@@ -1,0 +1,30 @@
+language: python
+
+python:
+  - 2.7
+
+env:
+  global:
+    - RDS_HOSTNAME=127.0.0.1 RDS_USERNAME=shippable RDS_PASSWORD="" RDS_DB_NAME=test RDS_PORT=3306
+    - secure: RXkuFk+4jiIJm94QCOZKzoMWk3zcT6fA0KCHdM8TKbNvyaIG89CAmZp04tYQpZg6QXJjhLHchHUTkHRQG2urWPCgEoI7Cm1tZskXB1uHl1vmo6pLNK95HIVJEDKqdHyPuq6dWJOliNUnVPQtD8Sg4V+PTAfiFGfyyV78kvRFEzHIn3iEZgoJrnOHsEPXoUp8Qzcd2Ffu9CCjU4CGBYZY6ctjubhfUVEG/XAyNs3/vJixTOsW/0DNZ1z1itNfUit3cxROZHd5FA8ddqGN+zoK/7VMrMNeZm7NFeWeatxqYHepn/Pc2M4PG/LlWfXBMSz5xIY9oX9bZTkqR+FHCBubrA==
+
+install:
+  - pip install -r requirements.txt
+
+before_script: 
+  - mkdir -p shippable/testresults
+  - mkdir -p shippable/codecoverage
+  - mysql -e 'create database if not exists test;'
+  - mkdir -p ~/.elasticbeanstalk
+  - echo 'AWSAccessKeyId=AKIAJSZ63DTL3Z7KLVEQ' >> ~/.elasticbeanstalk/aws_credential_file
+  - echo 'AWSSecretKey='$AWSSecretKey >> ~/.elasticbeanstalk/aws_credential_file
+
+script:
+  - mkdir -p .elasticbeanstalk
+  - cp config .elasticbeanstalk/
+  - nosetests test.py --with-xunit --xunit-file=shippable/testresults/nosetests.xml
+  - which python && coverage run --branch test.py
+  - which python && coverage xml -o shippable/codecoverage/coverage.xml test.py
+
+after_success:
+  - export PATH=$PATH:$PWD/aws/eb/linux/python2.7/ && pip install -r aws/requirements.txt && eb init && eb push
