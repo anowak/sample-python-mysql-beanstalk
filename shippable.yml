@@ -5,13 +5,12 @@ python:
 
 env:
   global:
-    - EB_TOOLS_DIR=/tmp/eb_tools EB_VERSION=AWS-ElasticBeanstalk-CLI-2.6.3
-    - EB_TOOLS=$EB_TOOLS_DIR/$EB_VERSION
     - RDS_HOSTNAME=127.0.0.1 RDS_USERNAME=shippable RDS_PASSWORD="" RDS_DB_NAME=test RDS_PORT=3306
-    - secure: RXkuFk+4jiIJm94QCOZKzoMWk3zcT6fA0KCHdM8TKbNvyaIG89CAmZp04tYQpZg6QXJjhLHchHUTkHRQG2urWPCgEoI7Cm1tZskXB1uHl1vmo6pLNK95HIVJEDKqdHyPuq6dWJOliNUnVPQtD8Sg4V+PTAfiFGfyyV78kvRFEzHIn3iEZgoJrnOHsEPXoUp8Qzcd2Ffu9CCjU4CGBYZY6ctjubhfUVEG/XAyNs3/vJixTOsW/0DNZ1z1itNfUit3cxROZHd5FA8ddqGN+zoK/7VMrMNeZm7NFeWeatxqYHepn/Pc2M4PG/LlWfXBMSz5xIY9oX9bZTkqR+FHCBubrA==
+    - AWSAccessKeyId=AKIAJJL2U6T3F3Y5JIGA
+    - secure: tD2cjFcQ6xqzxhBjqu2y8XIqyw5kbwd2IhhocYJYtHlBAxVATmL5VTaH8WlqKC5O5wzTujekVmhlJ5eNrmVa3kBqDxKd4Go+oELoM0crDBepSudRoVHd11ee+YRhsgCuj3tfXSR+bUJV9wBcvZBRcTwDs1Nz82zX45R3pQzMIQ0JbSTGIppXtonYCpw9yx1JUpMtOf6XwcXfnOyUKWGsE8Abj9AOZxQ0oGalEtdSbrBUIY8iwzV0j/VzijfZzRpAK23AvOZLVNlp0+JCK+5OFlSOgVn4KV9j6lFA4MpT4dBacYItXNOkLVpx5fxVfq+r6CE8YlQObv4V0nJWTf2wtw==
 
 before_install:
-  - if [ ! -e $EB_TOOLS ]; then wget -q -O /tmp/eb.zip https://s3.amazonaws.com/elasticbeanstalk/cli/$EB_VERSION.zip && mkdir -p $EB_TOOLS_DIR && unzip /tmp/eb.zip -d $EB_TOOLS_DIR; fi
+  - pip install awsebcli
 
 install:
   - pip install -r requirements.txt
@@ -20,17 +19,17 @@ before_script:
   - mkdir -p shippable/testresults
   - mkdir -p shippable/codecoverage
   - mysql -e 'create database if not exists test;'
-  - mkdir -p ~/.elasticbeanstalk
-  - echo 'AWSAccessKeyId=AKIAJSZ63DTL3Z7KLVEQ' >> ~/.elasticbeanstalk/aws_credential_file
-  - echo 'AWSSecretKey='$AWSSecretKey >> ~/.elasticbeanstalk/aws_credential_file
+  - mkdir -p ~/.aws
+  - echo '[profile eb-cli]' > ~/.aws/config
+  - echo "aws_access_key_id = $AWSAccessKeyId" >> ~/.aws/config
+  - echo "aws_secret_access_key = $AWSSecretKey" >> ~/.aws/config
 
 script:
   - mkdir -p .elasticbeanstalk
-  - cp config .elasticbeanstalk/
+  - cp config.yml .elasticbeanstalk/
   - nosetests test.py --with-xunit --xunit-file=shippable/testresults/nosetests.xml
   - which python && coverage run --branch test.py
   - which python && coverage xml -o shippable/codecoverage/coverage.xml test.py
 
 after_success:
-  - $EB_TOOLS/AWSDevTools/Linux/AWSDevTools-RepositorySetup.sh
-  - export PATH=$PATH:$EB_TOOLS/eb/linux/python2.7/ && pip install boto==2.14.0 && eb push
+  - eb init && eb deploy
